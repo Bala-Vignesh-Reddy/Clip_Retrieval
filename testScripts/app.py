@@ -3,7 +3,7 @@ from qdrant_client import QdrantClient
 from transformers import CLIPProcessor, CLIPModel
 from PIL import Image
 import os
-from qdrant_query import generate_embeddings, qdrant_query, display_query_results
+from qdrant_query import generate_embeddings, qdrant_query
 
 st.set_page_config(page_title="Semantic Search", layout="wide")
 
@@ -17,10 +17,12 @@ def load_model():
 def qdrant_init():
     return QdrantClient(url="http://localhost:6333")
 
-def do_search(query, model, processor, qdrant_client, is_image_query=False):
+def do_search(query, model, processor, qdrant_client, collection_name, is_image_query=False):
     if query:
             with st.spinner("Searching..."):
                 try:
+                    image_directory = './images' # default path for image directory
+
                     if is_image_query:
                         if query.mode != 'RGB':
                             query = query.convert('RGB')
@@ -31,9 +33,12 @@ def do_search(query, model, processor, qdrant_client, is_image_query=False):
                         query, model, processor, is_image_query=is_image_query
                     )
                     
-                    search_results = qdrant_query(qdrant_client, "image_search", query_embedding)
+                    search_results = qdrant_query(qdrant_client, collection_name, query_embedding)
+
+                    if not search_results:
+                        st.warning("No results found")
+                        return
                     
-                    # Create 3 columns instead of 2 for better layout
                     cols = st.columns(3)
                     for idx, result in enumerate(search_results):
                         col_idx = idx % 3
@@ -41,7 +46,12 @@ def do_search(query, model, processor, qdrant_client, is_image_query=False):
                             metadata = result.payload
                             score = result.score
 
-                            img_path = os.path.join("../images", metadata["image_name"])
+                            if collection_name == "image_search":
+                                img_path = os.path.join(image_directory, metadata["image_name"])
+                            else:
+                                img_path = os.path.join("./testimages", metadata["image_name"])
+                            # print(img_path)
+
                             if os.path.exists(img_path):
                                 result_image = Image.open(img_path)
                                 
@@ -49,10 +59,29 @@ def do_search(query, model, processor, qdrant_client, is_image_query=False):
                                     result_image.thumbnail((200, 200))
                                     st.image(result_image, width=200)
                                 else:
-                                    result_image.thumbnail((200, 200))  # Maintains aspect ratio
+                                    result_image.thumbnail((200, 200)) 
                                     st.image(result_image, use_container_width=True)
 
                                 # Make metadata display more compact
+                                st.markdown(f"""
+                                    <div style='font-size: 0.9em'>
+                                        <b>{metadata['name']}</b><br>
+                                        Price: ₹{metadata['price']:.2f}<br>
+                                        Qty: {metadata['quantity']}<br>
+                                        <small>Score: {score:.4f}</small>
+                                    </div>
+                                """, unsafe_allow_html=True)
+                                st.write("---")
+                            else:
+                                # st.error("Image not found")
+                                alt_path = os.path.join("./images", metadata["image_name"])
+                                if os.path.exists(alt_path):
+                                    result_image = Image.open(alt_path)
+                                    result_image.thumbnail((200, 200))
+                                    st.image(result_image, width=200)
+                                else:
+                                    result_image.thumbnail((200, 200))
+                                    st.image(result_image, use_container_width=True)
                                 st.markdown(f"""
                                     <div style='font-size: 0.9em'>
                                         <b>{metadata['name']}</b><br>
@@ -76,7 +105,18 @@ def main():
 
     with st.sidebar:
         st.title("Search Options")
+
+        # collection selector
+        collections = qdrant_client.get_collections().collections
+        collection_name = [col.name for col in collections]
+        # print(collection_name)
+        selected_collection = st.selectbox("Select Collection", collection_name, index=0)
+
         search_type = st.radio("Choose search type", ["Text", "Image"])
+
+        # st.markdown("---")
+        # if st.button("Upload New Images", type="secondary"):
+        #     st.switch_page("1_bulk_upload")
 
         st.markdown("---")
         st.markdown("""
@@ -91,7 +131,7 @@ def main():
         query = st.text_input("Enter the query:", key="query_input")
 
         if st.button("Search") or query:
-            do_search(query, model, processor, qdrant_client, is_image_query=False)
+            do_search(query, model, processor, qdrant_client, selected_collection, is_image_query=False)
     else:
         st.subheader("Image-Based Search")
         uploaded_file = st.file_uploader("Upload an image to find similar items", 
@@ -108,7 +148,7 @@ def main():
                 st.markdown("""Image uploaded successfully
                             Click the button below to search""")
                 if st.button("Search", type="primary"):
-                    do_search(image, model, processor, qdrant_client, is_image_query=True)
+                    do_search(image, model, processor, qdrant_client, selected_collection, is_image_query=True)
 
 
 if __name__ == "__main__":
