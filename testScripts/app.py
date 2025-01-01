@@ -4,6 +4,11 @@ from transformers import CLIPProcessor, CLIPModel
 from PIL import Image
 import os
 from qdrant_query import generate_embeddings, qdrant_query
+from dotenv import load_dotenv
+
+load_dotenv()
+QDRANT_HOST = os.getenv('QDRANT_HOST')
+QDRANT_PORT = os.getenv('QDRANT_PORT')
 
 st.set_page_config(page_title="Semantic Search", layout="wide")
 
@@ -15,7 +20,17 @@ def load_model():
 
 @st.cache_resource
 def qdrant_init():
-    return QdrantClient(url="http://localhost:6333")
+    try:
+        client = QdrantClient(
+            url=f"http://{os.getenv('QDRANT_HOST', 'qdrant')}:{os.getenv('QDRANT_PORT', '6333')}"
+        )
+        # Test the connection
+        client.get_collections()
+        return client
+    except Exception as e:
+        st.error(f"Failed to connect to Qdrant: {str(e)}")
+        st.error("Make sure Qdrant is running and accessible")
+        return None
 
 def do_search(query, model, processor, qdrant_client, collection_name, is_image_query=False):
     if query:
