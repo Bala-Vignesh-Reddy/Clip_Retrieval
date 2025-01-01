@@ -8,22 +8,26 @@ import pandas as pd
 import os
 import matplotlib.pyplot as plt
 
-def generate_embeddings(query, model, processor, is_image_query=True):
+def generate_embeddings(query, model, processor, is_image_query=False):
     """
     Generating an embedding for the query (image or text).
     - is_image_query: is True, query is treated as image.. else text.
     """
 
     if is_image_query:
-        image = Image.open(query)
-        inputs = processor(images=image, return_tensors="pt", padding=True)
+        # Process image query
+        inputs = processor(images=query, return_tensors="pt", padding=True)
+        with torch.no_grad():
+            features = model.get_image_features(**inputs)
     else:
-        inputs = processor(text=query, return_tensors="pt", padding=True)
-
-    with torch.no_grad():
-        embedding = model.get_text_features(**inputs) if not is_image_query else model.get_image_features(**inputs)
+        # Process text query
+        inputs = processor(text=[query], return_tensors="pt", padding=True)
+        with torch.no_grad():
+            features = model.get_text_features(**inputs)
     
-    return embedding.numpy().flatten()
+    # Normalize features
+    features = features / features.norm(dim=-1, keepdim=True)
+    return features.squeeze().cpu().numpy()
 
 def qdrant_query(qdrant_client, collection_name, query_embedding, top_k=10):
     """
