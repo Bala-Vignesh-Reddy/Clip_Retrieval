@@ -1,0 +1,44 @@
+
+services:
+  app:
+    build: ./
+    container_name: clip_search-app
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./images:/app/images
+      - ./testimages:/app/testimages
+    environment:
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+    depends_on:
+      - qdrant
+    networks:
+      - semantic_search_network
+
+  qdrant:
+    image: qdrant/qdrant
+    container_name: qdrant-server
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - ./qdrant_storage:/qdrant/storage
+    networks:
+      - semantic_search_network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:6333/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+volumes:
+  qdrant_storage:
+    name: qdrant_storage
+
+networks:
+  semantic_search_network:
+    name: semantic_search_network
+    driver: bridge  
+
