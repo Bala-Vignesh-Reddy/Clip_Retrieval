@@ -1,2 +1,8 @@
+__pycache__/
+testScripts/image_embeddings.npy
+fine_tuned_image_embeddings.npy
+fine_tuned_clip/
+fine_tuned_clip_processor/
+testimages/
 images/
-
+metadata.csv
