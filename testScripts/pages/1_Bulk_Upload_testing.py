@@ -6,12 +6,31 @@ import torch
 from qdrant_client import QdrantClient
 from qdrant_client.models import PointStruct, VectorParams
 import numpy as np
+from dotenv import load_dotenv
+
+load_dotenv()
+QDRANT_HOST = os.getenv('QDRANT_HOST')
+QDRANT_PORT = os.getenv('QDRANT_PORT')
 
 @st.cache_resource
 def load_model():
     model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
     processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
     return model, processor
+
+@st.cache_resource
+def qdrant_init():
+    try:
+        client = QdrantClient(
+            url=f"http://{os.getenv('QDRANT_HOST', 'qdrant')}:{os.getenv('QDRANT_PORT', '6333')}"
+        )
+        # Test the connection
+        client.get_collections()
+        return client
+    except Exception as e:
+        st.error(f"Failed to connect to Qdrant: {str(e)}")
+        st.error("Make sure Qdrant is running and accessible")
+        return None
 
 def generate_embeddings(image, model, processor):
     if image.mode != 'RGB':
@@ -28,16 +47,13 @@ def main():
     st.title("Bulk Image Upload and Processing")
 
     model, processor = load_model()
-    qdrant_client = QdrantClient(host="localhost", port=6333)
+    qdrant_client = qdrant_init()
     collection_name = "test_collection"
 
     if not qdrant_client.collection_exists(collection_name):
         qdrant_client.create_collection(
             collection_name=collection_name,
             vectors_config=VectorParams(size=512, distance="Cosine"),
-            metadata={
-                "image_directory": "./testImages" # deafult path for image directory
-            }
         )
         st.info(f"Created new Collection: {collection_name}")
     else:
@@ -61,19 +77,14 @@ def main():
 
         col1, col2 = st.columns(2)
         with col1:
-            save_path = st.text_input("Save folder path:", "./testImages")
+            save_path = st.text_input("Save folder path:", "./testimages")
         with col2:
             prefix = st.text_input("Filename prefix:", "uploaded_") 
 
         if st.button("Process and save images"):
             with st.spinner("Processing images..."):
                 try:
-                    qdrant_client.update_collection(
-                        collection_name=collection_name,
-                        metadata={
-                            "image_directory": save_path
-                        }   
-                    )
+                    os.makedirs(save_path, exist_ok=True)
                     points = []
                     # progress_bar = st.progress(0)
                     # status_text = st.empty()
