@@ -2,6 +2,42 @@
 
 This project implements a semantic search system using CLIP embeddings and Qdrant vector database. It allows users to search through image collections using either text descriptions or similar images.
 
+## Installation 
+
+### Prerequisites
+- Docker
+- Git
+- Python
+
+### Windows
+1. Download or clone this repo
+```cmd
+git clone https://github.com/Bala-Vignesh-Reddy/Clip_Retrieval.git
+cd Clip_Retrieval
+```
+2. Run the setup script
+```cmd
+setup.bat
+```
+Or double click `setup.bat` in file explorer.
+
+### Linux
+1. Download or clone this repo
+```bash
+git clone https://github.com/Bala-Vignesh-Reddy/Clip_Retrieval.git
+cd Clip_Retrieval
+```
+2. Run the setup script
+```bash
+./setup.sh
+```
+Or double click `setup.sh` in file explorer.
+
+## Usage
+### Access the application:
+    - Web UI: http://localhost:8501
+    - Qdrant: http://localhost:6333
+
 ## Features
 - Text-to-Image search
 - Image-to-Image search
