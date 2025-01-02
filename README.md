@@ -9,6 +9,9 @@ This project implements a semantic search system using CLIP embeddings and Qdran
 - Git
 - Python
 
+Download the images folder from the drive. (see the folder structure and store all the images inside images/ folder)
+[images](https://drive.google.com/drive/folders/1DFnJtDYUVtpk0LAQSABPfpyOYvzLGceE?usp=sharing)
+
 ### Windows
 1. Download or clone this repo
 ```cmd
