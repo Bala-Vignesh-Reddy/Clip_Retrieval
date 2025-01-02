@@ -4,7 +4,7 @@ This project implements a semantic search system using CLIP embeddings and Qdran
 
 ## Installation 
 
-### Prerequisites
+### Download all the Prerequisites 
 - Docker
 - Git
 - Python
